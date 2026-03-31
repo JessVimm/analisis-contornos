@@ -1487,21 +1487,22 @@ class App:
             for j in range(columnas):
                 if self.img_binaria[i, j] == 255:
 
-                    # Vecinos 4
+                    # Solo revisar derecha y abajo para no duplicar
                     vecinos = [
-                        (i-1, j),  # arriba
-                        (i+1, j),  # abajo
-                        (i, j-1),  # izquierda
-                        (i, j+1)   # derecha
+                        (i, j+1),  # derecha
+                        (i+1, j)   # abajo
                     ]
 
                     for ni, nj in vecinos:
-                        # Si está fuera de la imagen también se cuenta como fondo
-                        if (ni < 0 or ni >= filas or
-                            nj < 0 or nj >= columnas or
-                            self.img_binaria[ni, nj] == 0):
+                        if (ni < filas and nj < columnas and
+                            self.img_binaria[ni, nj] == 255):
                             perimetro_contacto += 1
-        
+        # Verificar con la fórmula
+        n = int(np.count_nonzero(self.img_binaria)) # Número de pixeles
+        perimetro_contacto = int((-perimetro + (4*n))/2) # Usaremos este
+        #print("Perimetro de contacto mediante la formula: ") # Prueba
+        #print((perimetro_contacto))
+
         # 8.4) Cálculo de la caract. de Euler
         
         # Binarizar imagen
