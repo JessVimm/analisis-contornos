@@ -629,7 +629,7 @@ class App:
             print("Cadena F8 demasiado corta")
             return
 
-        # Tabla (si no la pusiste en __init__)
+        # Tabla
         F8toAF8 = {
             (0, 0): 0, (0, 1): 1, (0, 2): 2, (0, 3): 3, (0, 4): 4, (0, 5): 5, (0, 6): 6, (0, 7): 7,
             (1, 0): 7, (1, 1): 0, (1, 2): 1, (1, 3): 2, (1, 4): 3, (1, 5): 4, (1, 6): 5, (1, 7): 6,
@@ -1502,7 +1502,7 @@ class App:
                             self.img_binaria[ni, nj] == 0):
                             perimetro_contacto += 1
         
-        # 8.4) Cálculo de la caract. de Euler ------
+        # 8.4) Cálculo de la caract. de Euler
         
         # Binarizar imagen
         img_bin = self.img_binaria // 255
@@ -1544,10 +1544,12 @@ class App:
         #print("Huecos:", H)
 
         # 8.5) Calcular compacidad discreta
+        n = int(np.count_nonzero(self.img_binaria)) # Número de pixeles
         perimetro = len(self.cadena_f4)
-        area = int(np.count_nonzero(self.img_binaria))
-
-        compacidad = (perimetro ** 2) / area
+        if n > 1:
+            compacidad = (n - perimetro/4) / (n - math.sqrt(n))
+        else:
+            compacidad = 0
 
         # Mostrar resultados
         self.lbl_perimetro.config(text=f"Perímetro: {perimetro}")
