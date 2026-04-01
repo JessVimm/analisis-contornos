@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------------
 # INTERFAZ QUE APLICA ANÁLISIS DE CONTORNOS EN IMÁGENES BINARIAS
 # Elaborado por:
-# Cristina
+# Cristina Díaz Esquivel
 # Jessica Victoria Martínez Medina
 # --------------------------------------------------------------------------------------
 # ======================================================================================
@@ -26,6 +26,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import heapq
 import math
+from decimal import Decimal, getcontext
+
 
 # ===============================================
 # APLICACIÓN
@@ -66,6 +68,7 @@ class App:
         # Menú Archivo
         menu_archivo = tk.Menu(menubar, tearoff=0)
         menu_archivo.add_command(label="Cargar imagen", command=self.cargar_imagen)
+        menu_archivo.add_command(label="Cargar TXT", command=self.cargar_txt)
         menu_archivo.add_separator()
         menu_archivo.add_command(label="Salir", command=root.quit)
 
@@ -84,6 +87,7 @@ class App:
         menu_cadenas.add_command(label="AF8", command=self.generar_af8)
         menu_cadenas.add_command(label="VCC", command=self.generar_vcc)
         menu_cadenas.add_command(label="3OT", command=self.generar_3ot)
+        menu_cadenas.add_command(label="Guardar cadena", command=self.guardar_cadena)
 
         menubar.add_cascade(label="Cadenas", menu=menu_cadenas)
 
@@ -94,6 +98,7 @@ class App:
         menu_decodificacion.add_command(label="AF8", command=self.decodificar_af8)
         menu_decodificacion.add_command(label="VCC", command=self.decodificar_vcc)
         menu_decodificacion.add_command(label="3OT", command=self.decodificar_3ot)
+        menu_decodificacion.add_command(label="Guardar Imagen", command=self.guardar_imagen_resultado)
 
         menubar.add_cascade(label="Decodificacion", menu=menu_decodificacion)
 
@@ -158,6 +163,22 @@ class App:
 
         self.img = None
         self.img_binaria = None
+
+        #-----------------------------------------------
+        # Área para hacer el drop del TXT (Interfaz)
+        #-----------------------------------------------
+
+        # self.drop_txt = tk.Label(
+        #     root,
+        #     text="Arrastra aquí el archivo TXT de la cadena",
+        #     width=50,
+        #     height=2,
+        #     bg="#e8e8e8"
+        # )
+        # self.drop_txt.pack(pady=5)
+
+        # self.drop_txt.drop_target_register(DND_FILES)
+        # self.drop_txt.dnd_bind('<<Drop>>', self.drop_txt_archivo)
 
         # -----------------------------------------------
         # Área de Resultados (Interfaz)
@@ -256,6 +277,71 @@ class App:
         if ruta.startswith("{") and ruta.endswith("}"):
             ruta = ruta[1:-1]
         self.procesar_ruta(ruta)
+
+    def guardar_imagen_resultado(self):
+        """Exporta la imagen actual"""
+        if self.img_binaria is None:
+            messagebox.showwarning("Advertencia", "No hay imagen para guardar.")
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG", "*.png"), ("JPG", "*.jpg"), ("BMP", "*.bmp")],
+            title="Guardar imagen"
+        )
+
+        if not ruta:
+            return  
+
+        try:
+            img_pil = Image.fromarray(self.img_binaria)
+            img_pil.save(ruta)
+            messagebox.showinfo("Éxito", "Imagen guardada correctamente.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo guardar la imagen:\n{e}")
+
+    # ----------------------------
+    # Cargar y guardar archivo TXT
+    # ----------------------------
+    def cargar_txt(self):
+        """
+        Carga un archivo .txt y lo muestra en el cuadro de texto.
+        """
+        ruta = filedialog.askopenfilename(
+            filetypes=[("Text files", "*.txt")]
+        )
+
+        if not ruta:
+            return
+        try:
+            with open(ruta, "r", encoding="utf-8") as f:
+                contenido = f.read()
+
+            self.text_resultado.delete("1.0", tk.END)
+            self.text_resultado.insert(tk.END, contenido)
+            self.ruta_txt = ruta
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def drop_txt_archivo(self, event):
+        ruta = event.data
+
+        if ruta.startswith("{") and ruta.endswith("}"):
+            ruta = ruta[1:-1]
+
+        try:
+            with open(ruta, "r", encoding="utf-8") as f:
+                contenido = f.read()
+
+            self.text_resultado.delete("1.0", tk.END)
+            self.text_resultado.insert(tk.END, contenido)
+
+            self.ruta_txt = ruta
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     # -----------------------------------------------
     # 2) Códigos de Cadena
@@ -781,20 +867,83 @@ class App:
         self.text_resultado.insert(tk.END, f"\nLongitud: {len(c3ot)}")
 
 
-        # ------------------------------
+    # ------------------------------
+    # Función auxiliar para guardar codigo de cadena
+    # ------------------------------
+    def guardar_cadena(self):
+        """
+        Guarda el contenido del textbox en un archivo .txt
+        """
+        texto = self.text_resultado.get("1.0", tk.END).strip()
+
+        if not texto:
+            messagebox.showwarning("Advertencia", "No hay contenido para guardar")
+            return
+
+        import os
+
+        if hasattr(self, "ruta_imagen"):
+            nombre_base = os.path.splitext(os.path.basename(self.ruta_imagen))[0]
+        else:
+            nombre_base = "resultado"
+
+        nombre_archivo = f"{nombre_base}_cadena.txt"
+
+        ruta = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            initialfile=nombre_archivo,
+            filetypes=[("Text files", "*.txt")]
+        )
+
+        if not ruta:
+            return
+
+        try:
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write(texto)
+
+            messagebox.showinfo("Éxito", "Archivo guardado correctamente")
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    # ------------------------------
     # Función auxiliar para obtener la cadena
     # ------------------------------
     def obtener_cadena_desde_texto(self):
+        """
+        Obtener y procesar la cadena de código desde el cuadro de texto de la interfaz. 
+        Se ignoran automáticamente otras partes del texto como "Longitud". 
+        """
         texto = self.text_resultado.get("1.0", tk.END).strip()
+
         if not texto:
             messagebox.showwarning("Advertencia", "Primero ingresa una cadena.")
             return None
-        return [int(c) for c in texto if c.isdigit()]
+
+        lineas = texto.splitlines()
+
+        cadena = None
+
+        for i, linea in enumerate(lineas):
+            if "Cadena" in linea:
+                if i + 1 < len(lineas):
+                    cadena = lineas[i + 1].strip()
+                    break
+
+        if not cadena:
+            messagebox.showerror("Error", "No se encontró la cadena en el formato correcto.")
+            return None
+
+        return [int(c) for c in cadena if c.isdigit()]
 
     # ------------------------------
     # Función auxiliar para expandir la imagen
     # ------------------------------
     def expandir_imagen(self, img, x, y):
+        """
+        Expandir la imagen cuando el contorno se sale de los límites, permitiendo continuar el dibujo sin errores.
+        """
         h, w = img.shape
         new_h, new_w = h, w
         offset_x, offset_y = 0, 0
@@ -823,6 +972,9 @@ class App:
     # Función auxiliar para obtener el contorno
     # ------------------------------
     def obtener_contorno(self):
+        """
+        Se obtiene el contorno de la figura
+        """
         if not self.validar_imagen():
             return None
 
@@ -842,6 +994,9 @@ class App:
     # Función auxiliar para rellenar la imagen
     # ------------------------------
     def rellenar_la_imagen(self):
+        """
+        Rellenar la imagen
+        """
         cnt = self.obtener_contorno()
         if cnt is None:
             return None
@@ -850,42 +1005,81 @@ class App:
         cv2.drawContours(img_rellena, [cnt], -1, 255, thickness=-1)
 
         return img_rellena
+    
+    def mostrar_imagen_resultado(self, img):
+        """Muestra la imagen final"""
+
+        img_pil = Image.fromarray(img)
+
+        # Redimensionar manteniendo proporción
+        max_size = (400, 400)
+        img_pil.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        self.img_tk = ImageTk.PhotoImage(img_pil)
+
+        # Mantener tamaño fijo visual
+        self.label_img.config(image=self.img_tk, width=400, height=400, bg="black")
+        self.label_img.image = self.img_tk
 
     # ------------------------------
     # 3) DECODIFICACION 
     # ------------------------------
-    # DECODIFICAR F4 
-    def decodificar_f4(self):
-
-        # Obtener cadena desde el textbox
-        cadena = self.obtener_cadena_desde_texto()
-        if cadena is None:
+    def procesar_decodificacion(self, cadena, tipo="f4", convertir=None, rotar=False, validar_cierre=False):
+        """
+        Convierte una cadena de código (F4, F8, etc.) en una imagen, aplicando conversión, validación, relleno..., para finalmente mostrarla.
+        """
+        if not cadena:
             return
 
-        # Reconstruir contorno desde la cadena F4
-        img = self.mostrar_f4_imagen(cadena)
+        # 1. Conversión previa 
+        if convertir:
+            resultado = convertir(cadena)
 
-        # Guardar como imagen actual
+            if isinstance(resultado, tuple):
+                cadena, extra = resultado
+            else:
+                cadena = resultado
+
+        # 2. Generar imagen
+        if tipo == "f4":
+            img = self.mostrar_f4_imagen(cadena)
+        elif tipo == "f8":
+            img = self.decodificar_f8_imagen(cadena)
+
         self.img_binaria = img
-        #self.img = img
 
-        # Rellenar el interior del contorno
-        img = self.rellenar_la_imagen()
+        # 3. Validar cierre 
+        if validar_cierre and isinstance(resultado, tuple):
+            _, cierra = resultado
+            if not cierra:
+                messagebox.showwarning(
+                    "Advertencia",
+                    "La figura no cierra correctamente."
+                )
+                self.mostrar_imagen_resultado(img)
+                return
 
-        # Si el relleno fue exitoso
-        if img is not None:
+        # 4. Rellenar
+        img_rellena = self.rellenar_la_imagen()
 
-            # Actualizar imagen con relleno
-            self.img_binaria = img
-            self.img = img
+        if img_rellena is not None:
+            self.img_binaria = img_rellena
+            self.img = img_rellena
+            img = img_rellena
 
-            # Mostrar resultado
-            self.mostrar_imagen_resultado(img)
+        # 5. Rotar 
+        if rotar:
+            img = np.rot90(img)
 
-        # Mostrar imagen final
+        # 6. Mostrar
         self.mostrar_imagen_resultado(img)
-
+    
     def mostrar_f4_imagen(self, cadena, size=(100, 100)):
+        """
+        Generar una imagen binaria dibujando el contorno a partir de una cadena F4, 
+        siguiendo direcciones y expandiendo la imagen si es necesario.
+        """
+        
         # Crear imagen vacía
         img = np.zeros(size, dtype=np.uint8)
 
@@ -914,76 +1108,34 @@ class App:
 
         # Regresar imagen generada
         return img
-
-    # DECODIFICAR F8 
-    def decodificar_f8(self):
-        # Obtener cadena desde el textbox
-        cadena = self.obtener_cadena_desde_texto()
-        if cadena is None:
-            return
-
-        # Reconstruir contorno desde F8
-        img = self.decodificar_f8_imagen(cadena)
-
-        # Guardar como imagen actual
-        self.img_binaria = img
-        #self.img = img
-
-        # Rellenar interior del contorno
-        img = self.rellenar_la_imagen()
-
-        # Si el relleno fue exitoso
-        if img is not None:
-
-            # Actualizar imagen con relleno
-            self.img_binaria = img
-            self.img = img
-
-            # Mostrar resultado
-            self.mostrar_imagen_resultado(img)
-
-        # Mostrar imagen final
-        self.mostrar_imagen_resultado(img)
+    
 
     def decodificar_f8_imagen(self, cadena, size=(100, 100)):
-        # Crear imagen vacía
+        #Generar una imagen binaria dibujando el contorno a partir de una cadena F8, usando 8 direcciones posibles y expandiendo la imagen si es necesario.
+        
         img = np.zeros(size, dtype=np.uint8)
 
-        # Punto inicial en el centro
         x, y = size[0]//2, size[1]//2
 
-        # Direcciones del código F8 (8 vecinos)
+        # Direcciones del código F8
         moves = {0:(0,1), 1:(1,1), 2:(1,0), 3:(1,-1),
                 4:(0,-1), 5:(-1,-1), 6:(-1,0), 7:(-1,1)}
 
-        # Recorrer la cadena
         for d in cadena:
-
-            # Obtener desplazamiento
             dx, dy = moves[d]
 
-            # Actualizar posición
             x += dx
             y += dy
 
-            # Expandir imagen si se sale de los límites
             if not (0 <= x < img.shape[0] and 0 <= y < img.shape[1]):
                 img, x, y = self.expandir_imagen(img, x, y)
 
-            # Dibujar pixel del contorno
             img[x, y] = 255
 
-        # Regresar imagen generada
         return img
-
-
-    # DECODIFICAR AF8
-    # AF8 a F8 
+    
     def af8_a_f8(self, af8):
-        """
-        Convierte AF8 a F8 probando todas las direcciones iniciales.
-        Selecciona la que genera un contorno cerrado.
-        """
+        #Convierte AF8 a F8 probando todas las direcciones iniciales. Selecciona la que genera un contorno cerrado.
 
         # Movimientos F8
         moves = {
@@ -1012,44 +1164,12 @@ class App:
             if x == 0 and y == 0:
                 return f8  # encontró una solución válida
 
-        # Si ninguna cierra, devolver la última 
         print("Advertencia: AF8 no genera contorno cerrado con ningún inicial.")
         return f8
-
-    # DECODIFICAR AF8 A IMAGEN
-    def decodificar_af8(self):
-        cadena = self.obtener_cadena_desde_texto()
-        if not cadena:
-            return
-        
-        # 1. AF8 a F8
-        f8 = self.af8_a_f8(cadena)
-        
-        # 2. Dibujar contorno
-        img = self.decodificar_f8_imagen(f8)
-
-        # 3. Guardar como imagen actual
-        self.img_binaria = img
-
-        # 4. Rellenar
-        img = self.rellenar_la_imagen()
-
-        if img is not None:
-            self.img_binaria = img
-            self.img = img
-
-        img = np.rot90(img)
-
-        # 5. Mostrar
-        self.mostrar_imagen_resultado(img)
-
-    # VCC a F4 
+    
     def vcc_a_f4(self, vcc, inicial=0):
-        """
-        Convierte VCC a Freeman 4.
-        vcc: lista de símbolos [1, 2, 3]
-        inicial: dirección de entrada al primer vértice (default 0)
-        """
+        #Convierte VCC a Freeman 4. vcc: lista de símbolos [1, 2, 3], inicial: dirección de entrada al primer vértice (default 0)
+        
         # Matriz de transición basada en  (dirección_anterior, símbolo_vcc) -> dirección_nueva
         tabla_vcc = {
             # Si venía de 0 (Derecha)
@@ -1075,47 +1195,15 @@ class App:
                 f4.append(prev)
                 
         return f4
-
-    # DECODIFICAR VCC
-    def decodificar_vcc(self):
-        cadena = self.obtener_cadena_desde_texto()
-        if not cadena:
-            return
-        
-        # 1. VCC a F4
-        f4 = self.vcc_a_f4(cadena)
-        
-        # 2. Dibujar contorno
-        img = self.mostrar_f4_imagen(f4)
-
-        # 3. Guardar
-        self.img_binaria = img
-
-        # 4. Rellenar
-        img = self.rellenar_la_imagen()
-
-        if img is not None:
-            self.img_binaria = img
-            self.img = img
-
-        img = np.rot90(img)
-
-        # 5. Mostrar
-        self.mostrar_imagen_resultado(img)
-
-
-    # 3OT a F4 
+    
     def c3ot_a_f4(self, c3ot):
-            
+    # Convertir una cadena 3OT a F4 probando distintas direcciones iniciales y giros, seleccionando la que mejor aproxima o logra un contorno cerrado.
             mejor_f4 = None
             mejor_distancia = float('inf')
             
             moves = {0: (1, 0), 1: (0, 1), 2: (-1, 0), 3: (0, -1)}
 
-            # Probamos las 4 direcciones iniciales
             for inicial in range(4):
-                # Como el primer cambio en código siempre es '2', no sabemos si fue +1 o -1.
-                # Probamos ambas posibilidades para el primer giro (giro=1 y giro=-1).
                 for sentido_primer_giro in [1, -1]:
                     f4 = []
                     dir_actual = inicial
@@ -1128,16 +1216,12 @@ class App:
 
                     for simbolo in c3ot:
                         if simbolo == 0:
-                            # Se mantiene la dirección del support
                             nueva_dir = support
                         else:
-                            # Es un giro (1 o 2)
                             if not primer_cambio_visto:
-                                # Aplicamos el sentido que estamos probando en este bucle
                                 nueva_dir = (support + sentido_primer_giro) % 4
                                 primer_cambio_visto = True
                             else:
-                                # Buscamos qué dirección (D o I) generaría este símbolo
                                 encontrada = False
                                 for giro in [1, -1]:
                                     prueba_dir = (support + giro) % 4
@@ -1158,11 +1242,8 @@ class App:
                                 if not encontrada:
                                     posible = False
                                     break
-                            
-                            # Actualizamos ref
                             ref = support
                         
-                        # Actualizamos support y trayectoria
                         support = nueva_dir
                         f4.append(nueva_dir)
                         dx, dy = moves[nueva_dir]
@@ -1178,64 +1259,46 @@ class App:
 
             return mejor_f4, (mejor_distancia == 0)
 
-    # DECODIFICAR 3OT
-    def decodificar_3ot(self):
+    def decodificar_f4(self):
+    # Obtiene una cadena F4 y la decodifica a imagen usando el flujo general.
         cadena = self.obtener_cadena_desde_texto()
-        if not cadena:
-            return
-        
-        f4, cierra = self.c3ot_a_f4(cadena)
-        
-        img = self.mostrar_f4_imagen(f4)
+        self.procesar_decodificacion(cadena, tipo="f4")
 
-        self.img_binaria = img
+    def decodificar_f8(self):
+    # Obtiene una cadena F8 y la decodifica a imagen usando el flujo general.
+        cadena = self.obtener_cadena_desde_texto()
+        self.procesar_decodificacion(cadena, tipo="f8")
 
-        if not cierra:
-            messagebox.showwarning(
-                "Advertencia",
-                "La cadena 3OT no cierra correctamente. Se mostrará solo el contorno."
-            )
+    def decodificar_af8(self):
+    # Obtiene una cadena AF8 y la decodifica a imagen usando el flujo general.
+        cadena = self.obtener_cadena_desde_texto()
+        self.procesar_decodificacion(
+            cadena,
+            tipo="f8",
+            convertir=self.af8_a_f8,
+            rotar=True
+        )
 
-            self.text_resultado.insert(tk.END, "\nEstado: No cerrada\n")
+    def decodificar_vcc(self):
+    # Obtiene una cadena VCC y la decodifica a imagen usando el flujo general.
+        cadena = self.obtener_cadena_desde_texto()
+        self.procesar_decodificacion(
+            cadena,
+            tipo="f4",
+            convertir=self.vcc_a_f4,
+            rotar=True
+        )
+    
+    def decodificar_3ot(self):
+    # Obtiene una cadena 3OT y la decodifica a imagen usando el flujo general.
+        cadena = self.obtener_cadena_desde_texto()
+        self.procesar_decodificacion(
+            cadena,
+            tipo="f4",
+            convertir=self.c3ot_a_f4,
+            validar_cierre=True
+        )
 
-            self.mostrar_imagen_resultado(img)
-            return
-
-        img_rellena = self.rellenar_la_imagen()
-
-        if img_rellena is not None:
-            self.img_binaria = img_rellena
-            self.img = img_rellena
-            img = img_rellena
-
-        self.mostrar_imagen_resultado(img)
-
-    # ------------------------------
-    # Mostrar Imagen
-    # ------------------------------
-    def mostrar_imagen_resultado(self, img):
-        img_pil = Image.fromarray(img)
-
-        # Redimensionar manteniendo proporción
-        max_size = (400, 400)
-        img_pil.thumbnail(max_size, Image.Resampling.LANCZOS)
-
-        self.img_tk = ImageTk.PhotoImage(img_pil)
-
-        # Mantener tamaño fijo visual
-        self.label_img.config(image=self.img_tk, width=400, height=400, bg="black")
-        self.label_img.image = self.img_tk
-
-    def cierra_figura_f4(self, f4):
-        x, y = 0, 0
-        moves = {0:(0,1), 1:(1,0), 2:(0,-1), 3:(-1,0)}
-
-        for d in f4:
-            dx, dy = moves[d]
-            x += dx
-            y += dy
-
-        return x == 0 and y == 0
 
     # -----------------------------
     # 4) Histograma
@@ -1329,97 +1392,189 @@ class App:
     # -----------------------------
     def comprimir(self):
         """
-        Aplica compresión Huffman y calcula eficiencia.
+        Compresión completa:
+        - Huffman (con árbol visual)
+        - Aritmética (solo resultado final)
         """
-        datos_cadena = self.seleccionar_cadena()
-        if datos_cadena is None or len(datos_cadena) == 0:
-            messagebox.showwarning("Advertencia", "Cadena vacía")
+        cadena = self.seleccionar_cadena()
+        if not cadena:
+            messagebox.showwarning("Advertencia", "La cadena está vacía")
             return
 
-        total_elementos = len(datos_cadena)
-        conteo_simbolos = Counter(datos_cadena)
+        getcontext().prec = max(100, len(cadena) * 2)
 
-        # Entropía De Shannon
-        entropia_shannon = 0.0
-        for frecuencia in conteo_simbolos.values():
-            probabilidad = frecuencia / total_elementos
-            entropia_shannon -= probabilidad * np.log2(probabilidad)
+        # FRECUENCIAS Y PROBABILIDADES
+        total = len(cadena)
 
-        # Probabilidades
-        diccionario_probabilidades = {
-            simbolo: freq / total_elementos
-            for simbolo, freq in conteo_simbolos.items()
+        conteo = {}
+        for s in cadena:
+            conteo[s] = conteo.get(s, 0) + 1
+
+        probabilidades = {}
+        for s in conteo:
+            probabilidades[s] = conteo[s] / total
+
+        # ENTROPÍA
+        entropia = 0.0
+        for s in probabilidades:
+            p = probabilidades[s]
+            if p > 0:
+                entropia += p * (-math.log2(p))
+
+        # TABLA ARITMÉTICA 
+        simbolos_ordenados = sorted(probabilidades.keys())
+
+        tabla_intervalos = {}
+        acumulado = Decimal('0.0')
+
+        for simbolo in simbolos_ordenados:
+            prob = Decimal(str(probabilidades[simbolo]))
+            limite_superior = acumulado + prob
+            tabla_intervalos[simbolo] = (acumulado, limite_superior)
+            acumulado = limite_superior
+
+        # COMPRESIÓN ARITMÉTICA
+        limite_inferior = Decimal('0.0')
+        limite_superior = Decimal('1.0')
+
+        for simbolo in cadena:
+            rango = limite_superior - limite_inferior
+            inf_sim, sup_sim = tabla_intervalos[simbolo]
+
+            nuevo_superior = limite_inferior + (rango * sup_sim)
+            nuevo_inferior = limite_inferior + (rango * inf_sim)
+
+            limite_inferior, limite_superior = nuevo_inferior, nuevo_superior
+
+        codigo_aritmetico = (limite_inferior + limite_superior) / 2
+
+        # RESULTADO ARITMÉTICO FINAL
+        resultado_aritmetico = {
+            "limite_inferior": limite_inferior,
+            "limite_superior": limite_superior,
+            "codigo": codigo_aritmetico
         }
 
-        # 7) Longitud Aritmética
-        longitud_aritmetica = 0.0
-        for simbolo in diccionario_probabilidades:
-            prob = diccionario_probabilidades[simbolo]
+        longitud_aritmetica = entropia
 
-            if prob > 0:
-                log_base2 = np.log(prob) / np.log(2)
-                longitud_aritmetica += prob * (-log_base2)
+        # HUFFMAN 
+        class Nodo:
+            def __init__(self, simbolo, freq):
+                self.simbolo = simbolo
+                self.freq = freq
+                self.izq = None
+                self.der = None
 
-        # 6) Huffman
-        cola_prioridad = [[freq, [simb, ""]] for simb, freq in conteo_simbolos.items()]
-        heapq.heapify(cola_prioridad)
+            def __lt__(self, other):
+                return self.freq < other.freq
 
-        while len(cola_prioridad) > 1:
-            nodo_menor = heapq.heappop(cola_prioridad)
-            nodo_mayor = heapq.heappop(cola_prioridad)
+        heap = []
+        for s in conteo:
+            heapq.heappush(heap, Nodo(s, conteo[s]))
 
-            for elemento in nodo_menor[1:]:
-                elemento[1] = '0' + elemento[1]
+        while len(heap) > 1:
+            n1 = heapq.heappop(heap)
+            n2 = heapq.heappop(heap)
 
-            for elemento in nodo_mayor[1:]:
-                elemento[1] = '1' + elemento[1]
+            padre = Nodo(None, n1.freq + n2.freq)
+            padre.izq = n1
+            padre.der = n2
 
-            nodo_combinado = [nodo_menor[0] + nodo_mayor[0]] + nodo_menor[1:] + nodo_mayor[1:]
-            heapq.heappush(cola_prioridad, nodo_combinado)
+            heapq.heappush(heap, padre)
 
-        codigos_huffman = heapq.heappop(cola_prioridad)[1:]
+        raiz = heap[0] if heap else None
+        self.raiz_huffman = raiz
 
-        # Longitud Promedio Huffman
-        total_bits = 0
-        for simbolo, codigo_binario in codigos_huffman:
-            frecuencia = conteo_simbolos[simbolo]
-            total_bits += frecuencia * len(codigo_binario)
+        codigos = {}
 
-        longitud_promedio = total_bits / total_elementos
+        def generar_codigos(nodo, codigo=""):
+            if not nodo:
+                return
+            if nodo.simbolo is not None:
+                codigos[nodo.simbolo] = codigo
+                return
+            generar_codigos(nodo.izq, codigo + "0")
+            generar_codigos(nodo.der, codigo + "1")
 
-        # Eficiencia
-        eficiencia = entropia_shannon / longitud_promedio if longitud_promedio != 0 else 0
+        if raiz:
+            generar_codigos(raiz)
 
-        # Ventana externa que despliega resultados
+        longitud_huffman = sum(
+            probabilidades[s] * len(codigos[s])
+            for s in conteo
+        )
+
+        eficiencia = entropia / longitud_huffman if longitud_huffman else 0
+
+        # VENTANA DE RESULTADOS
         ventana = tk.Toplevel(self.root)
-        ventana.title("Resultado de la Compresión de Huffman y Compresión Aritmética")
-        ventana.geometry("400x400")
+        ventana.title("Resultados de Compresión")
+        ventana.geometry("520x600")
 
-        titulo = tk.Label(ventana, text="Resultados de Compresión", font=("Arial", 14, "bold"))
-        titulo.pack(pady=10)
+        tk.Label(
+            ventana,
+            text="Resultados de Compresión",
+            font=("Arial", 14, "bold")
+        ).pack(pady=10)
 
-        frame = tk.Frame(ventana)
-        frame.pack(pady=10)
+        # Huffman
+        texto_huffman = "Códigos Huffman:\n" + "\n".join(
+            f"{s}: {c}" for s, c in sorted(codigos.items())
+        )
 
-        # ---- Códigos Huffman ----
-        texto_codigos = ""
-        for simbolo, codigo_binario in sorted(codigos_huffman):
-            texto_codigos += f"{simbolo}: {codigo_binario}\n"
+        tk.Label(ventana, text=texto_huffman, justify="left").pack(anchor="w", padx=20)
 
-        lbl_codigos = tk.Label(frame, text=f"Códigos Huffman:\n{texto_codigos}", justify="left")
-        lbl_codigos.pack(anchor="w")
+        # Métricas
+        tk.Label(ventana, text=f"Entropía: {entropia:.4f}").pack(anchor="w", padx=20)
+        tk.Label(ventana, text=f"Longitud Huffman: {longitud_huffman:.4f}").pack(anchor="w", padx=20)
+        tk.Label(ventana, text=f"Longitud aritmética: {longitud_aritmetica:.4f}").pack(anchor="w", padx=20)
+        tk.Label(ventana, text=f"Eficiencia: {eficiencia:.4f}").pack(anchor="w", padx=20)
 
-        # ---- Métricas ----
-        lbl_entropia = tk.Label(frame, text=f"Entropía: {entropia_shannon:.4f}")
-        lbl_huffman = tk.Label(frame, text=f"Longitud Huffman: {longitud_promedio:.4f}")
-        lbl_aritmetica = tk.Label(frame, text=f"Longitud aritmética: {longitud_aritmetica:.4f}")
-        lbl_eficiencia = tk.Label(frame, text=f"Eficiencia: {eficiencia:.4f}")
+        # Aritmética 
+        tk.Label(
+            ventana,
+            text=(
+                "\nResultado Aritmético\n\n"
+                f"Intervalo:\n[{resultado_aritmetico['limite_inferior']:.12f}, "
+                f"{resultado_aritmetico['limite_superior']:.12f}]\n\n"
+                f"Código: {float(resultado_aritmetico['codigo']):.12f}"
+            ),
+            justify="left"
+        ).pack(anchor="w", padx=20)
 
-        lbl_entropia.pack(anchor="w", pady=2)
-        lbl_huffman.pack(anchor="w", pady=2)
-        lbl_aritmetica.pack(anchor="w", pady=2)
-        lbl_eficiencia.pack(anchor="w", pady=2)
-    
+        # BOTÓN ÁRBOL HUFFMAN
+        def ver_arbol():
+            ventana_arbol = tk.Toplevel(self.root)
+            ventana_arbol.title("Árbol de Huffman")
+            ventana_arbol.geometry("600x500")
+
+            canvas = tk.Canvas(ventana_arbol, bg="white")
+            canvas.pack(fill="both", expand=True)
+
+            def dibujar(nodo, x, y, dx):
+                if not nodo:
+                    return
+
+                texto = f"{nodo.simbolo}\n({nodo.freq})" if nodo.simbolo else f"{nodo.freq}"
+
+                canvas.create_oval(x-20, y-20, x+20, y+20, fill="#a5a5e1")
+                canvas.create_text(x, y, text=texto, font=("Arial", 10, "bold"))
+
+                if nodo.izq:
+                    canvas.create_line(x, y+20, x-dx, y+80)
+                    canvas.create_text(x-dx+10, y+50, text="0")
+                    dibujar(nodo.izq, x-dx, y+80, dx//2)
+
+                if nodo.der:
+                    canvas.create_line(x, y+20, x+dx, y+80)
+                    canvas.create_text(x+dx-10, y+50, text="1")
+                    dibujar(nodo.der, x+dx, y+80, dx//2)
+
+            if self.raiz_huffman:
+                dibujar(self.raiz_huffman, 300, 40, 120)
+
+        tk.Button(ventana, text="Ver Árbol de Huffman", command=ver_arbol).pack(pady=10)
+
     # -----------------------------------------------
     # 8) Propiedades Geométricas (Funciones y lógica)
     # -----------------------------------------------
