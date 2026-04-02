@@ -55,7 +55,7 @@ class App:
         self.root = root
         self.root.title("Análisis de Contornos")
         self.root = root
-        self.root.title("Análisis de Contornos de imágenes binarias")
+        self.root.title("Análisis de Contornos de Imágenes Binarias")
 
         # ===============================================
         # DETALLES DE INTERFAZ
@@ -114,7 +114,7 @@ class App:
 
         menu_propiedades.add_command(label="Mostrar propiedades", command=self.mostrar_propiedades)
 
-        menubar.add_cascade(label="Propiedades", menu=menu_propiedades)
+        menubar.add_cascade(label="Descriptores", menu=menu_propiedades)
 
         root.config(menu=menubar)
 
