@@ -181,9 +181,9 @@ códigos de cadena según al algoritmo solicitado. Esto se debe porque
 varias funciones posteriores necesitan que el usuario haya obtenido
 previamente algunos códigos de cadena.
 
-> Los botones corresponden al algoritmo que se aplica y por ende al
-> código de cadena que se genera: F4, F8, AF8, VCC, 3OT.
->
+Los botones corresponden al algoritmo que se aplica y por ende al
+código de cadena que se genera: F4, F8, AF8, VCC, 3OT.
+
 > Paso 1: El usuario debe tener una imagen previamente cargada.\
 > Paso 2: El usuario puede dar clic en el botón que tenga el nombre del
 > algoritmo que guste aplicar.\
@@ -194,8 +194,7 @@ previamente algunos códigos de cadena.
 > tamaño, de lo contrario puede que no vea la cadena generada en el
 > cuadro de texto.
 >
-> ![](./media/media/image8.png){width="5.905555555555556in"
-> height="9.084722222222222in"}
+> ![](./media/media/image8.png)
 
 **Archivo**
 
